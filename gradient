@@ -1,0 +1,139 @@
+from sklearn.metrics import mean_squared_error
+from sarima import daily_dataframe
+from sarima import *
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.model_selection import TimeSeriesSplit
+import joblib
+import pickle
+
+MSE = mean_squared_error(x_teste, x_pred)
+RMSE = np.sqrt(MSE)
+#print(f'RMSE :{RMSE:.2f}')
+
+# Reformatando as features (tempo)
+t_treino = np.arange(len(x_treino)).reshape(-1, 1)
+t_teste = np.arange(len(x_treino), len(x_treino) + len(x_teste)).reshape(-1, 1)
+
+# Definir o modelo
+rf = RandomForestRegressor()
+
+# Definir o grid de hiperparâmetros
+param_grid = {
+    'n_estimators': [100, 200, 300],
+    'max_depth': [10, 20, 30],
+    'min_samples_split': [2, 5, 10]
+}
+
+# Configurar a busca
+grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, scoring='neg_mean_squared_error', verbose=2, n_jobs=-1)
+
+# Executar a busca
+grid_search.fit(t_treino, x_treino)
+
+# Melhor modelo encontrado
+best_model = grid_search.best_estimator_
+
+# Avaliar o modelo
+predictions = best_model.predict(t_teste)
+rmse = np.sqrt(mean_squared_error(x_teste, predictions))
+#print(f'RMSE: {rmse:.2f}')
+# Exemplo de adição de features
+daily_dataframe['day_of_year'] = daily_dataframe.index.dayofyear
+daily_dataframe['week_of_year'] = daily_dataframe.index.isocalendar().week
+daily_dataframe['day_of_week'] = daily_dataframe.index.dayofweek
+
+# Separar as novas features
+features = ['day_of_year', 'week_of_year', 'day_of_week']
+x_treino = daily_dataframe[daily_dataframe.index < '2009-01-01'][features].values
+x_teste = daily_dataframe[daily_dataframe.index >= '2009-01-01'][features].values
+y_treino = daily_dataframe[daily_dataframe.index < '2009-01-01']['temperature_2m_max'].values
+y_teste = daily_dataframe[daily_dataframe.index >= '2009-01-01']['temperature_2m_max'].values
+
+
+# Definir o modelo
+gbr = GradientBoostingRegressor()
+
+# Definir o grid de hiperparâmetros
+param_grid = {
+    'n_estimators': [100, 200, 300],
+    'learning_rate': [0.01, 0.1, 0.2],
+    'max_depth': [3, 4, 5]
+}
+
+# Configurar a busca com validação cruzada temporal
+tscv = TimeSeriesSplit(n_splits=5)
+grid_search = GridSearchCV(estimator=gbr, param_grid=param_grid, cv=tscv, scoring='neg_mean_squared_error', verbose=2, n_jobs=-1)
+grid_search.fit(x_treino, y_treino)
+
+# Melhor modelo encontrado
+best_model = grid_search.best_estimator_
+
+# Avaliar o modelo
+predictions = best_model.predict(x_teste)
+rmse = np.sqrt(mean_squared_error(y_teste, predictions))
+#print(f'RMSE: {rmse:.2f}')
+
+predictions = predictions
+
+# Calculando limites superior e inferior para a banda de erro
+upper_bound = predictions + rmse
+lower_bound = predictions - rmse
+lower_bound = lower_bound.reshape(-1)
+upper_bound = upper_bound.reshape(-1)
+
+# Plotar os resultados com banda de erro
+plt.figure(figsize=(14, 7))
+
+# Use a data como eixo x para o plot
+t_teste_dates = daily_dataframe[daily_dataframe.index >= '2009-01-01'].index # Extraia as datas de teste
+
+# Plotar dados reais
+plt.plot(t_teste_dates, y_teste, label='Temperatura Real', color='green') # Use y_teste que são os valores reais
+
+# Plotar previsões
+plt.plot(t_teste_dates, predictions, label='Previsão do Modelo', color='red') # Use as datas de teste
+
+# Plotar banda de erro
+plt.fill_between(t_teste_dates, lower_bound, upper_bound, color='pink', alpha=0.2, label='Banda de Erro') # Use as datas de teste
+
+plt.xlabel('Data')
+plt.ylabel('Temperatura')
+plt.title('Comparação entre Temperatura Real e Previsão do Modelo')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+# Salve o modelo treinado em um arquivo
+joblib.dump(gbr, 'gbr_model.pkl')
+
+# Carregue o modelo treinado
+gbr = joblib.load('gbr_model.pkl')
+
+# Salve as previsões em um arquivo
+joblib.dump(predictions, 'predictions.pkl')
+joblib.dump(upper_bound, 'upper_bound.pkl')
+joblib.dump(lower_bound, 'lower_bound.pkl')
+joblib.dump(t_teste_dates, 't_teste_dates.pkl')
+joblib.dump(y_teste, 'y_teste.pkl')
+
+# Salvar cada variável em um arquivo .pkl separado
+with open('predictions.pkl', 'wb') as f:
+    pickle.dump(predictions, f)
+
+with open('up.pkl', 'wb') as f:
+    pickle.dump(upper_bound, f)
+
+with open('down.pkl', 'wb') as f:
+    pickle.dump(lower_bound, f)
+
+with open('t_t.pkl', 'wb') as f:
+    pickle.dump(t_teste_dates, f)
+
+with open('y_t.pkl', 'wb') as f:
+    pickle.dump(y_teste, f)

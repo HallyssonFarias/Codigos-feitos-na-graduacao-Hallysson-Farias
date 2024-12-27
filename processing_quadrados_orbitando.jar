@@ -1,0 +1,30 @@
+int number=150;
+float theta=0;
+float radius = 400;
+float len = 150;
+
+void setup(){
+  size(1000,1000);
+  background(255);
+  
+}
+
+void draw(){
+  background(255);
+  fill(25);
+  stroke(255);
+  rectMode(CENTER);
+  translate(width/2, height/2);
+  float angle = theta;
+  float l = len;
+  float r = radius;
+  for(int i=0; i<number;i++){
+    float x = r*cos(angle);
+    float y = r*sin(angle);
+    rect(x,y,len,len);
+    angle+=0.05;
+    l -=1.5;
+    r -= 0.5;
+  }
+  theta+= 0.01;
+}

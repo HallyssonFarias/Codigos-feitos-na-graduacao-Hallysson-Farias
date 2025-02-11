@@ -1,0 +1,77 @@
+import numpy as np
+import pygame
+# import numpy as np
+
+# variáveis de tela
+WIDTH, HEIGHT = 1900, 1000
+CELL_SZ = 3
+grid_w = WIDTH // CELL_SZ
+grid_h = HEIGHT // CELL_SZ
+theta = 0
+
+#cores poderia ser definido no argumento mas fica com frescura e n sei pq xD
+color_bg = (200,200,200)
+black = (0,0,0)
+white = (255,255,255)
+pink = (255,192,203)
+blue = (0,0,255)
+red = (150, 0, 0)
+green = (0, 150, 0)
+
+def draw_line():
+    for x in range(1, WIDTH//CELL_SZ):
+        for y in range(1, HEIGHT // CELL_SZ):
+            if x % 2 == 0 and y % 2 == 0:
+                pygame.draw.line(screen, red, (x*CELL_SZ, 0), (x*CELL_SZ, HEIGHT), 3)
+
+def rotate_point(x, y, cx, cy, angle):
+    """Rotaciona um ponto (x, y) ao redor do centro (cx, cy) por um ângulo dado."""
+    theta = np.radians(angle)
+    x_new = cx + (x - cx) * np.cos(theta) - (y - cy) * np.sin(theta)
+    y_new = cy + (x - cx) * np.sin(theta) + (y - cy) * np.cos(theta)
+    return x_new, y_new
+
+def draw_rotated_lines(angle):
+    """Desenha linhas verticais em uma grade e as rotaciona juntas."""
+    cx, cy = WIDTH // 2, HEIGHT // 2  # Centro da tela
+
+    for x in range(1, WIDTH // CELL_SZ):
+        if x % 2 == 0:
+            x1, y1 = x * CELL_SZ, 0
+            x2, y2 = x * CELL_SZ, HEIGHT
+
+            # Rotacionar os pontos
+            x1_rot, y1_rot = rotate_point(x1, y1, cx, cy, angle)
+            x2_rot, y2_rot = rotate_point(x2, y2, cx, cy, angle)
+
+            pygame.draw.line(screen, green, (x1_rot, y1_rot), (x2_rot, y2_rot), 3)
+
+def setup():
+    global screen
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Celullar Automata rules")
+
+def draw():
+    clock = pygame.time.Clock()
+    angle = 0  # Inicializar o ângulo dentro da função
+    running = True
+
+    while running:
+        screen.fill(white)  # Preencher a tela antes de desenhar
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.MOUSEWHEEL:  # Scroll do mouse
+                angle += event.y * 1.1  # Scroll para cima aumenta, para baixo diminui
+
+        draw_rotated_lines(angle) # Desenha a linha com o ângulo atualizado
+        draw_line()
+        pygame.display.flip()
+        clock.tick(30)
+
+
+setup()
+draw()
+pygame.quit()

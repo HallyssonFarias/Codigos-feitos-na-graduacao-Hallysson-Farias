@@ -1,0 +1,90 @@
+import pygame # tem mt coisa pra corrigir mas ja tem um início
+
+# Inicializa Pygame
+pygame.init()
+
+# Configuração da tela
+WIDTH, HEIGHT = 800, 400
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+clock = pygame.time.Clock()
+font = pygame.font.SysFont(None, 36)
+
+# Som da colisão
+collision_sound = pygame.mixer.Sound("blip.wav")  # Certifique-se de ter esse arquivo
+
+# Configuração das massas e blocos
+mass1 = 1   # Massa do bloco 1
+mass2 = 1000000   # Massa do bloco 2
+
+class Block:
+    def __init__(self, x, v, mass, color):
+        self.x = x
+        self.v = v
+        self.m = mass
+        self.size = 50
+        self.color = color
+
+    def move(self):
+        self.x += self.v
+
+    def draw(self):
+        pygame.draw.rect(screen, self.color, (self.x, HEIGHT // 2, self.size, self.size))
+
+# Criar blocos
+block1 = Block(100, 0, mass1, (0, 255, 0))   # Bloco verde
+block2 = Block(400, -2, mass2, (255, 0, 0))  # Bloco vermelho
+
+# Contador de colisões
+collision_count = 0
+
+def elastic_collision(b1, b2):
+    global collision_count
+    v1_new = ((b1.m - b2.m) * b1.v + 2 * b2.m * b2.v) / (b1.m + b2.m)
+    v2_new = ((b2.m - b1.m) * b2.v + 2 * b1.m * b1.v) / (b1.m + b2.m)
+
+    b1.v, b2.v = v1_new, v2_new
+    collision_count += 1
+    collision_sound.play()
+
+    # Reposicionar para evitar sobreposição
+    b1.x = b2.x - b1.size - 1
+
+# Loop principal
+running = True
+while running:
+    screen.fill((30, 30, 30))
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # Mover blocos
+    block1.move()
+    block2.move()
+
+    # Colisão com a parede
+    if block1.x <= 10:
+        block1.x = 10  # Reposiciona exatamente na parede
+        block1.v = -block1.v
+        collision_count += 1
+        collision_sound.play()
+
+    # Colisão entre blocos
+    if block1.x + block1.size >= block2.x:
+        elastic_collision(block1, block2)
+
+    # Desenhar blocos
+    block1.draw()
+    block2.draw()
+
+    # Desenhar parede
+    pygame.draw.rect(screen, (200, 200, 200), (0, HEIGHT // 2, 10, 50))
+
+    # Exibir contagem de colisões
+    collision_text = font.render(f"Colisões: {collision_count}", True, (255, 255, 255))
+    screen.blit(collision_text, (20, 20))
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()

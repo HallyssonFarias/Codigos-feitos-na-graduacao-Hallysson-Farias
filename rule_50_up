@@ -1,0 +1,150 @@
+import numpy as np
+import pygame
+# import numpy as np
+# from scipy import signal
+# import os
+# from datetime import datetime
+
+# variáveis de tela
+WIDTH, HEIGHT = 1900, 1000
+CELL_SZ = 10
+grid_w = WIDTH // CELL_SZ
+grid_h = HEIGHT // CELL_SZ
+
+#cores poderia ser definido no argumento mas fica com frescura e n sei pq xD
+color_bg = (200,200,200)
+black = (0,0,0)
+white = (255,255,255)
+pink = (255,192,203)
+blue = (0,0,255)
+
+def grid_50(grid_w, grid_h):
+    grid = np.full((grid_h,grid_w), 0, dtype=int)
+    grid[0, grid_w // 2] = 1
+    return grid
+
+def grid_100(grid_w):
+    grid = np.full((grid_h, grid_w), 0, dtype=int)
+    for c in range(grid_w - 1):
+        grid[0, c * np.random.choice([0, 1], p=[0.8, 0.2])] = 1
+    return grid
+
+def draw_rect():
+    for x in range(WIDTH//CELL_SZ):
+        for y in range(HEIGHT // CELL_SZ):
+            color = blue if grid[y,x] == 1 else white
+            pygame.draw.rect(screen, color, pygame.Rect(x* CELL_SZ + 1,y * CELL_SZ+1, CELL_SZ-2, CELL_SZ-2))
+
+def rule_50():
+    for x in range(WIDTH//CELL_SZ-1):
+        for y in range(HEIGHT // CELL_SZ-1):
+            if grid[y, x-1] == 1 and grid[y, x+1] == 1 or grid[y, x-1] == 1  or grid[y, x+1] == 1 :
+                grid[y+1, x] = 1
+
+def rule_110(): # A ORDEM IMPORTA, MEU DEUS
+    global grid
+    new_grid = grid.copy()
+    for y in range(grid_h-1):
+        for x in range(1, grid_w-1):
+
+            # Obtém o estado dos vizinhos
+            left = grid[y, x - 1]
+            center = grid[y, x]
+            right = grid[y, x + 1]
+
+            if left == 1 and center == 1 and right == 1: # 111 -> 0
+                new_grid[y + 1, x] = 0
+            elif left == 1 and center == 1 and right == 0: # 110 -> 1
+                new_grid[y + 1, x] = 1
+            elif left == 1 and center == 0 and right == 1: # 101 -> 1
+                new_grid[y + 1, x] = 1
+            elif left == 1 and center == 0 and right == 0: # 100 -> 0
+                new_grid[y + 1, x] = 0
+            elif left == 1 and center == 1 and right == 1: # 011 -> 1
+                new_grid[y + 1, x] = 1
+            elif left == 0 and center == 1 and right == 0: # 010 -> 1
+                new_grid[y + 1, x] = 1
+            elif left == 0 and center == 0 and right == 1: # 001 -> 1
+                new_grid[y + 1, x] = 1
+            elif left == 0 and center == 0 and right == 0: # 000 -> 0
+                new_grid[y + 1, x] = 0
+
+    grid = new_grid
+
+def rule_110_h():  # A ORDEM IMPORTA, MEU DEUS
+    global grid
+    pink = (0,0,255)
+
+    new_grid = grid.copy()
+    for y in range(grid_h - 1):
+        for x in range(1, grid_w - 1):
+
+            # Obtém o estado dos vizinhos
+            left = grid[y, x - 1]
+            center = grid[y, x]
+            right = grid[y, x + 1]
+
+            if left == 1 and center == 1 and right == 1:  # 111 -> 0
+                new_grid[y + 1, x] = 0
+            elif left == 1 and center == 1 and right == 0:  # 110 -> 1
+                new_grid[y + 1, x] = 1
+            elif left == 1 and center == 0 and right == 1:  # 101 -> 1
+                new_grid[y + 1, x] = 1
+            elif left == 1 and center == 0 and right == 0:  # 100 -> 0
+                new_grid[y + 1, x] = 0
+            elif left == 1 and center == 1 and right == 1:  # 011 -> 1
+                new_grid[y + 1, x] = 1
+            elif left == 0 and center == 1 and right == 0:  # 010 -> 1
+                new_grid[y + 1, x] = 1
+            elif left == 0 and center == 0 and right == 1:  # 001 -> 1
+                new_grid[y + 1, x] = 1
+            elif left == 0 and center == 0 and right == 0:  # 000 -> 0
+                new_grid[y + 1, x] = 0
+
+    grid = new_grid
+def rule_22():
+    global grid
+    new_grid = grid.copy()  # Cria uma cópia para armazenar o próximo estado
+    for y in range(grid_h - 1):  # Evita a última linha
+        for x in range(1, grid_w - 1):  # Evita as bordas
+            # Obtém o estado dos vizinhos
+            left = grid[y, x - 1]
+            center = grid[y, x]
+            right = grid[y, x + 1]
+
+            # Aplica as regras da Regra 22
+            if left == 1 and center == 0 and right == 0:  # 100
+                new_grid[y + 1, x] = 1
+            elif left == 0 and center == 0 and right == 1:  # 001
+                new_grid[y + 1, x] = 1
+            elif left == 0 and center == 1 and right == 0:  # 010
+                new_grid[y + 1, x] = 1
+            else:
+                new_grid[y + 1, x] = 0  # Qualquer outro caso, branco
+    grid = new_grid  # Atualiza o grid para o próximo estado
+
+
+def setup():
+    global screen
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Celullar Automata rules")
+
+def draw():
+    clock = pygame.time.Clock()
+    running = True
+    while running:
+        rule_50()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        screen.fill(color_bg)
+        draw_rect()
+        pygame.display.flip()
+        clock.tick(30)
+
+grid = grid_50(grid_w, grid_h)
+#grid = grid_100(grid_w)
+setup()
+draw()

@@ -1,0 +1,49 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import gumbel_r
+
+# Parâmetros da distribuição Gumbel
+loc = 1
+scale = 0.5
+
+# Tempos de falha e intervenção
+t_failures = [1.8, 3.4, 5.2]
+
+# Eixo do tempo total
+t = np.linspace(0, 6, 500)
+
+# Plot da função de confiabilidade para cada ciclo
+plt.figure(figsize=(10,6))
+
+for i, tf in enumerate(t_failures):
+    if i == 0:
+        t_segment = t[t <= tf]
+        t_local = t_segment  # Começa do zero
+    else:
+        t_segment = t[(t > t_failures[i-1]) & (t <= tf)]
+        t_local = t_segment - t_segment[0]  # Reinicia tempo local
+
+    # Curva de confiabilidade da Gumbel, reiniciando do zero
+    R_t_segment = 1 - gumbel_r.cdf(t_local, loc=loc, scale=scale)
+
+    # Plot
+    plt.plot(t_segment, R_t_segment, 'b--')
+
+# Plot da idade virtual (resetando a cada falha)
+for i in range(len(t_failures)):
+    if i == 0:
+        plt.plot([0, t_failures[i]], [0, t_failures[i]], 'r-')
+    else:
+        plt.plot([t_failures[i-1], t_failures[i]], [0, t_failures[i] - t_failures[i-1]], 'r-')
+
+# Linhas auxiliares
+for i, tf in enumerate(t_failures):
+    plt.axvline(tf, color='gray', linestyle='dotted')
+    age = tf - (t_failures[i-1] if i != 0 else 0)
+    plt.axhline(age, color='gray', linestyle='dotted')
+
+plt.xlabel('Real time')
+plt.ylabel('Reliability and Virtual Age')
+plt.title('Failure time distribution and effective age')
+plt.grid(True)
+plt.show()
